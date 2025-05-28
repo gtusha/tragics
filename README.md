@@ -53,12 +53,6 @@ soap_vectors = trajectory.calculate_soap()
 
 # Calculate radius of gyration over time
 frames, rg_values = trajectory.calculate_radius_of_gyration()
-
-# Select representative frames based on similarity
-selected_frames, scores = trajectory.sequential_similarity_selection(
-    output_file='selected_frames.xyz',
-    threshold=0.999
-)
 ```
 
 ### SOAP Analysis Example
@@ -70,12 +64,12 @@ kernel_matrix = trajectory.soap_kernel_matrix()
 # Get similarity of frame 0 to all other frames  
 similarity_vector = trajectory.soap_kernel_vector(frame_idx=0)
 
-# Select frames with custom SOAP parameters
+# Select representative frames based on (SOAP) similarity
 selected_frames, scores = trajectory.sequential_similarity_selection(
     output_file='representative_frames.xyz',
     threshold=0.99,
-    r_cut=6.0,      # SOAP cutoff radius (Angstrom)
-    nl_max=8        # SOAP basis set size
+    r_cut=6.0,      
+    nl_max=8        
 )
 ```
 
@@ -85,7 +79,7 @@ selected_frames, scores = trajectory.sequential_similarity_selection(
 # Calculate distance between atoms 0 and 1 over trajectory
 distances = trajectory.calculate_distance(atom1_idx=0, atom2_idx=1)
 
-# Calculate oxygen-oxygen RDF with periodic boundary conditions
+# Calculate oxygen-oxygen RDF
 distances, rdf_values = trajectory.calculate_rdf(
     selection1='O',                           # First selection (element)
     selection2='O',                           # Second selection  
