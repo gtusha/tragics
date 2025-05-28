@@ -24,11 +24,11 @@ pip install -r requirements.txt
 ```
 
 **Required packages:**
-- `numpy` (≥1.20.0) - Numerical computations
-- `matplotlib` (≥3.3.0) - Plotting and visualization  
-- `MDAnalysis` (≥2.0.0) - Trajectory reading and manipulation
-- `dscribe` (≥1.2.0) - SOAP descriptor calculations
-- `ase` (≥3.20.0) - Atomic structure manipulation
+- `numpy` (≥1.20.0)
+- `matplotlib` (≥3.3.0) 
+- `MDAnalysis` (≥2.0.0)
+- `dscribe` (≥1.2.0) 
+- `ase` (≥3.20.0)
 
 ### Step 3: Verify Installation
 Test that everything works:
