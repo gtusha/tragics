@@ -1,0 +1,11 @@
+# Core dependencies for TRAGICS package
+numpy>=1.20.0
+matplotlib>=3.3.0
+MDAnalysis>=2.0.0
+
+# SOAP descriptor calculations
+dscribe>=1.2.0
+ase>=3.20.0
+
+# Testing dependencies (optional, for developers)
+pytest>=6.0.0
