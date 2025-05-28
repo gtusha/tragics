@@ -127,24 +127,6 @@ TRAGICS automatically generates several output files:
 
 ## API Reference
 
-### Core Class
-- `TRAGICS(trajectory_path, logfile)` - Main analysis class
-
-### SOAP Methods
-- `calculate_soap(...)` - Calculate SOAP descriptors
-- `soap_kernel_vector(frame_idx, ...)` - Frame-to-all similarity
-- `soap_kernel_matrix(...)` - All-pairs similarity matrix  
-- `sequential_similarity_selection(...)` - Representative frame selection
-
-### Geometry Methods
-- `calculate_radius_of_gyration(...)` - Molecular compactness over time
-- `calculate_distance(atom1_idx, atom2_idx, ...)` - Inter-atomic distances
-- `calculate_rdf(selection1, selection2, box_dimensions, ...)` - Radial distribution functions
-
-### I/O Methods  
-- `filter_trajectory(...)` - Write trajectory subsets
-
-
 ## Contributing
 
 This package is under active development. For bug reports or feature requests, please check the issues section.
