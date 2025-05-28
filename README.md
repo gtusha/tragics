@@ -1,6 +1,6 @@
 # TRAGICS: TRajectory Analysis and Gauging In Chemical Space
 
-A Python package for analyzing molecular dynamics trajectories.
+A Python package for analyzing molecular dynamics trajectories (.xyz format so far).
 This package draws some ideas from duartegroup/mlp-train (https://github.com/duartegroup/mlp-train). Thanks to the authors for their excellent work and open-source contributions.
 
 ## Features
@@ -29,14 +29,6 @@ pip install -r requirements.txt
 - `MDAnalysis` (≥2.0.0)
 - `dscribe` (≥1.2.0) 
 - `ase` (≥3.20.0)
-
-### Step 3: Verify Installation
-Test that everything works:
-
-```python
-from tragics import TRAGICS
-print("TRAGICS successfully imported!")
-```
 
 ## Quick Start
 
@@ -111,21 +103,6 @@ trajectory.filter_trajectory(
     subset_atoms=list(range(20))
 )
 ```
-
-## Output Files
-
-TRAGICS automatically generates several output files:
-
-- **Log files**: `your_logfile.log` - Detailed analysis information and timing
-- **Plots**: 
-  - `trajectory_name_radius_of_gyration.pdf` - Rg vs time
-  - `trajectory_name-kernel_matrix.pdf` - SOAP similarity heatmap
-  - `trajectory_name_element1_element2_rdf.pdf` - RDF plots
-- **Data**: 
-  - `trajectory_name_element1_element2_rdf.csv` - RDF data in CSV format
-- **Trajectories**: User-specified XYZ files from filtering operations
-
-## API Reference
 
 ## Contributing
 
