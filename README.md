@@ -1,14 +1,14 @@
 # TRAGICS: TRajectory Analysis and Gauging In Chemical Space
 
-A Python package for analyzing molecular dynamics trajectories with integrated NEB calculations.
+A Python package for analyzing molecular dynamics trajectories, perform NEB calculations and more.
 
 ## Features
 
 - **SOAP Analysis**: Calculate SOAP descriptors and kernel similarities
 - **Geometric Analysis**: Radius of gyration, atomic distances, RDF  
 - **NEB Calculations**: Nudged Elastic Band with climbing image support
-- **Frame Selection**: Sequential similarity selection for trajectory sampling
-- **Visualization**: Automated plotting of analysis results
+- **Frame Selection**: Sequential similarity selection with SOAP from trajectories
+- **Visualization**: Automated plotting of (some) analysis results
 - **Trajectory I/O**: Filter and write trajectory subsets
 
 ## Installation
@@ -25,131 +25,52 @@ Place `tragics` folder in your working directory.
 
 ## Quick Start
 
-### Basic NEB Calculation
+### NEB Calculation
 
 ```python
 from tragics import TRAGICS
-from ase.calculators.emt import EMT
+from mace.calculators import MACECalculator
 
-# Initialize
 traj = TRAGICS('trajectory.xyz', 'analysis.log')
 
-# Run NEB
+# Basic NEB from trajectory frames
 images, energies = traj.calculate_neb(
-    calculator=EMT(),
+    calculator=MACECalculator(model_paths='model.model', device='cpu'),
     initial_frame=0,
     final_frame=100,
     n_images=11,
-    fmax=0.05,
-    output_file='neb_result.xyz'
+    fmax=0.05
+)
+
+# Advanced: climbing image + endpoint optimization + TS guess
+images, energies = traj.calculate_neb(
+    calculator=calculator,
+    initial_file='initial.xyz',      # Or use initial_frame=0
+    final_file='final.xyz',           # Or use final_frame=100
+    ts_guess_file='guess.xyz',        # Optional TS guess
+    n_images=15,
+    optimize_endpoints=True,          # Pre-optimize endpoints
+    use_climbing_image=True,          # Accurate TS location
+    optimizer='FIRE',                 # Or 'BFGS'
+    spring_constant=0.3               # Or None for auto-scale
 )
 
 print(f"Barrier: {max(energies):.3f} eV")
 ```
 
-### NEB with MACE
+**Key parameters:**
+- `calculator`: Any ASE calculator (MACE, EMT, etc.)
+- Input: `(initial_frame, final_frame)` OR `(initial_file, final_file)`
+- `n_images=7`: Images including endpoints
+- `fmax=0.05`: Convergence criterion (eV/Å)
+- `use_climbing_image=False`: Enable for accurate TS
+- `optimize_endpoints=False`: Pre-optimize reactant/product
 
-```python
-from mace.calculators import MACECalculator
+**Outputs:** XYZ path, ASE trajectory, energy plot/CSV, detailed log
 
-calculator = MACECalculator(
-    model_paths='your_model.model',
-    device='cpu'
-)
-
-images, energies = traj.calculate_neb(
-    calculator=calculator,
-    initial_frame=0,
-    final_frame=100,
-    n_images=15,
-    fmax=0.03,
-    optimize_endpoints=True,
-    use_climbing_image=True,
-    output_file='neb_mace.xyz'
-)
-```
-
-### NEB from Separate Files
-
-```python
-images, energies = traj.calculate_neb(
-    calculator=calculator,
-    initial_file='initial.xyz',
-    final_file='final.xyz',
-    ts_guess_file='ts_guess.xyz',  # Optional
-    n_images=11,
-    output_file='neb_result.xyz'
-)
-```
-
-## NEB Parameters
-
-### Required
-- `calculator`: ASE calculator (MACE, EMT, etc.)
-- Either `(initial_frame, final_frame)` or `(initial_file, final_file)`
-
-### Optional
-- `n_images=7`: Number of images (including endpoints)
-- `fmax=0.05`: Force convergence (eV/Å)
-- `optimizer='FIRE'`: Optimizer ('FIRE' or 'BFGS')
-- `optimize_endpoints=False`: Optimize initial/final structures
-- `ts_guess_frame=None`: TS guess frame index
-- `ts_guess_file=None`: TS guess XYZ file
-- `use_climbing_image=False`: Enable climbing image NEB
-- `ci_steps=None`: Climbing image steps (None = converge)
-- `spring_constant=None`: Manual spring constant (None = auto-scale)
-- `output_file='neb_result.xyz'`: Output path
-
-## NEB Features
-
-### Climbing Image NEB
-Accurately locates transition states:
-```python
-images, energies = traj.calculate_neb(
-    calculator=calculator,
-    initial_frame=0,
-    final_frame=100,
-    use_climbing_image=True,
-    ci_steps=500  # Or None for convergence
-)
-```
-
-### Endpoint Optimization
-Pre-optimize reactant/product:
-```python
-images, energies = traj.calculate_neb(
-    calculator=calculator,
-    initial_frame=0,
-    final_frame=100,
-    optimize_endpoints=True
-)
-```
-
-### Parallel Computation
-Automatic MPI support with ASE:
-```bash
-mpirun -np 4 python neb_script.py
-```
-
-### Outputs
-- `neb_result.xyz`: Final NEB path
-- `neb_trajectory.traj`: ASE trajectory
-- `trajectory_neb_barrier.pdf`: Energy profile plot
-- `trajectory_neb_barrier.csv`: Energy data
-- `neb_analysis.log`: Detailed log
+**Parallel:** Automatic MPI support via ASE: `mpirun -np 4 python script.py`
 
 ## Other TRAGICS Features
-
-### SOAP Analysis
-```python
-soap_vectors = traj.calculate_soap()
-kernel_matrix = traj.soap_kernel_matrix()
-
-selected_frames, scores = traj.sequential_similarity_selection(
-    output_file='selected.xyz',
-    threshold=0.99
-)
-```
 
 ### Geometric Analysis
 ```python
@@ -171,7 +92,7 @@ Current version: 0.2.0 (with NEB support)
 
 ## Authors
 
-Gers & Claude
+Gers
 
 ## License
 
