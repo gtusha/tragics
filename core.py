@@ -7,6 +7,7 @@ import MDAnalysis as mda
 
 from .analysis.soap import SOAPCalculator
 from .analysis.geometry import GeometryAnalyzer
+from .analysis.neb import NEBCalculator
 from .analysis.plotting import Plotter
 from .utils import setup_logging, timer, TrajectoryWriter
 
@@ -58,6 +59,7 @@ class TRAGICS:
         self.name = trajectory_path.stem
         self.soap = SOAPCalculator(self)
         self.geometry = GeometryAnalyzer(self)
+        self.neb = NEBCalculator(self)
         self.plotter = Plotter(self)
         self.writer = TrajectoryWriter(self)
     
@@ -94,7 +96,12 @@ class TRAGICS:
     @timer
     def calculate_rdf(self, *args, **kwargs):
         """Delegate to geometry analyzer."""
-        return self.geometry.calculate_rdf(*args, **kwargs) 
+        return self.geometry.calculate_rdf(*args, **kwargs)
+    
+    @timer
+    def calculate_neb(self, *args, **kwargs):
+        """Delegate to NEB calculator."""
+        return self.neb.calculate_neb(*args, **kwargs)
 
     @timer
     def filter_trajectory(self, *args, **kwargs):

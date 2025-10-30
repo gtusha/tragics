@@ -7,15 +7,10 @@ class Plotter:
     """Handles all plotting functionality."""
     
     def __init__(self, tragics_instance):
-        """Initialize with reference to parent TRAGICS instance."""
         self.tragics = tragics_instance
     
     def plot_matrix_scatter(self, matrix: np.ndarray) -> None:
-        """Plot matrix values as a very dense scatter plot.
-        
-        Args:
-            matrix: 2D numpy array containing the matrix to plot
-        """
+        """Plot matrix values as a dense scatter plot."""
         rows, cols = matrix.shape
         x, y = np.meshgrid(np.arange(rows), np.arange(cols))
 
@@ -39,12 +34,7 @@ class Plotter:
     def plot_radius_of_gyration(self,
                                frames: np.ndarray,
                                rg_values: np.ndarray) -> None:
-        """Create and save a plot of radius of gyration over time.
-        
-        Args:
-            frames: Array of frame numbers
-            rg_values: Array of radius of gyration values
-        """
+        """Plot radius of gyration over time."""
         plt.figure(figsize=(10, 6))
         plt.plot(frames, rg_values, '-b', label='Radius of Gyration')
         plt.xlabel('Frame')
@@ -62,14 +52,7 @@ class Plotter:
                 rdf_values: np.ndarray,
                 rdf_name: str = "rdf",
                 save_csv: bool = True) -> None:
-        """Create and save a plot of the radial distribution function.
-    
-        Args:
-            distances: Array of radial distances (bin centers)
-            rdf_values: Array of RDF values
-            rdf_name: Base name for output files (will be appended with extensions)
-            save_csv: If True, save the RDF data to a CSV file
-        """
+        """Plot radial distribution function."""
         plt.figure(figsize=(10, 6))
         plt.plot(distances, rdf_values, '-b', label='RDF')
         plt.xlabel('Distance (Å)')
@@ -82,9 +65,37 @@ class Plotter:
                 bbox_inches='tight')
         plt.close()
     
-        # Save data to CSV if requested
         if save_csv:
             csv_filename = f"{self.tragics.name}_{rdf_name}.csv"
             header = "Distance(Angstrom),g(r)"
             data = np.column_stack((distances, rdf_values))
+            np.savetxt(csv_filename, data, delimiter=',', header=header, comments='')
+    
+    def plot_neb_barrier(self,
+                        image_indices: np.ndarray,
+                        energies: np.ndarray,
+                        save_csv: bool = True) -> None:
+        """Plot NEB energy barrier."""
+        plt.figure(figsize=(10, 6))
+        plt.plot(image_indices, energies, '-o', color='blue', 
+                markersize=8, linewidth=2, label='NEB Path')
+        
+        max_idx = np.argmax(energies)
+        plt.plot(image_indices[max_idx], energies[max_idx], 'r*', 
+                markersize=15, label=f'Barrier: {energies[max_idx]:.3f} eV')
+        
+        plt.xlabel('Image Index')
+        plt.ylabel('Relative Energy (eV)')
+        plt.title('NEB Energy Profile')
+        plt.grid(True, alpha=0.3)
+        plt.legend()
+        plt.savefig(f"{self.tragics.name}_neb_barrier.pdf",
+                   dpi=300,
+                   bbox_inches='tight')
+        plt.close()
+        
+        if save_csv:
+            csv_filename = f"{self.tragics.name}_neb_barrier.csv"
+            header = "ImageIndex,RelativeEnergy(eV)"
+            data = np.column_stack((image_indices, energies))
             np.savetxt(csv_filename, data, delimiter=',', header=header, comments='')

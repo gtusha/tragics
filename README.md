@@ -1,121 +1,178 @@
 # TRAGICS: TRajectory Analysis and Gauging In Chemical Space
 
-A Python package for analyzing molecular dynamics trajectories (.xyz format so far).
-This package draws some ideas from duartegroup/mlp-train (https://github.com/duartegroup/mlp-train). Thanks to the authors for their excellent work and open-source contributions.
+A Python package for analyzing molecular dynamics trajectories with integrated NEB calculations.
 
 ## Features
 
-- **SOAP Analysis**: Calculate SOAP descriptors and kernel similarities between molecular structures
-- **Geometric Analysis**: Radius of gyration, atomic distances, radial distribution functions (RDF)  
+- **SOAP Analysis**: Calculate SOAP descriptors and kernel similarities
+- **Geometric Analysis**: Radius of gyration, atomic distances, RDF  
+- **NEB Calculations**: Nudged Elastic Band with climbing image support
 - **Frame Selection**: Sequential similarity selection for trajectory sampling
-- **Visualization**: Automated plotting of (some) analysis results
+- **Visualization**: Automated plotting of analysis results
 - **Trajectory I/O**: Filter and write trajectory subsets
 
 ## Installation
 
-### Step 1: Download TRAGICS
-Download or clone this repository and place the `tragics` folder in your working directory.
-
-### Step 2: Install Dependencies
-Install the required Python packages using pip:
-
 ```bash
-pip install -r requirements.txt
+# Install dependencies
+pip install numpy matplotlib MDAnalysis ase dscribe
+
+# For MACE support (optional)
+pip install mace-torch
 ```
 
-**Required packages:**
-- `numpy` (≥1.20.0)
-- `matplotlib` (≥3.3.0) 
-- `MDAnalysis` (≥2.0.0)
-- `dscribe` (≥1.2.0) 
-- `ase` (≥3.20.0)
+Place `tragics` folder in your working directory.
 
 ## Quick Start
 
-### Basic Usage
+### Basic NEB Calculation
 
 ```python
 from tragics import TRAGICS
+from ase.calculators.emt import EMT
 
-# Initialize with your trajectory file
-trajectory = TRAGICS('your_trajectory.xyz', 'analysis.log')
+# Initialize
+traj = TRAGICS('trajectory.xyz', 'analysis.log')
 
-# Calculate SOAP descriptors for all frames
-soap_vectors = trajectory.calculate_soap()
-
-# Calculate radius of gyration over time
-frames, rg_values = trajectory.calculate_radius_of_gyration()
-```
-
-### SOAP Analysis Example
-
-```python
-# Calculate SOAP kernel matrix for similarity analysis
-kernel_matrix = trajectory.soap_kernel_matrix()
-
-# Get similarity of frame 0 to all other frames  
-similarity_vector = trajectory.soap_kernel_vector(frame_idx=0)
-
-# Select representative frames based on (SOAP) similarity
-selected_frames, scores = trajectory.sequential_similarity_selection(
-    output_file='representative_frames.xyz',
-    threshold=0.99,
-    r_cut=6.0,      
-    nl_max=8        
-)
-```
-
-### Geometric Analysis Example
-
-```python
-# Calculate distance between atoms 0 and 1 over trajectory
-distances = trajectory.calculate_distance(atom1_idx=0, atom2_idx=1)
-
-# Calculate oxygen-oxygen RDF
-distances, rdf_values = trajectory.calculate_rdf(
-    selection1='O',                           # First selection (element)
-    selection2='O',                           # Second selection  
-    box_dimensions=[25.0, 25.0, 25.0],       # Box size in Angstrom
-    max_dist=12.0                             # Maximum distance for RDF
-)
-```
-
-### Trajectory Filtering Example
-
-```python
-# Write every 10th frame to a new file
-trajectory.filter_trajectory(
-    output_file='subsampled.xyz',
+# Run NEB
+images, energies = traj.calculate_neb(
+    calculator=EMT(),
     initial_frame=0,
-    final_frame=1000,
-    step=10
+    final_frame=100,
+    n_images=11,
+    fmax=0.05,
+    output_file='neb_result.xyz'
 )
 
-# Write specific frames only
-trajectory.filter_trajectory(
-    output_file='selected.xyz',
-    frames_to_write=[0, 50, 100, 200]
+print(f"Barrier: {max(energies):.3f} eV")
+```
+
+### NEB with MACE
+
+```python
+from mace.calculators import MACECalculator
+
+calculator = MACECalculator(
+    model_paths='your_model.model',
+    device='cpu'
 )
 
-# Write subset of atoms (first 20 atoms)
-trajectory.filter_trajectory(
-    output_file='subset.xyz',
-    subset_atoms=list(range(20))
+images, energies = traj.calculate_neb(
+    calculator=calculator,
+    initial_frame=0,
+    final_frame=100,
+    n_images=15,
+    fmax=0.03,
+    optimize_endpoints=True,
+    use_climbing_image=True,
+    output_file='neb_mace.xyz'
 )
 ```
 
-## Contributing
+### NEB from Separate Files
 
-This package is under active development. For bug reports or feature requests, please check the issues section.
+```python
+images, energies = traj.calculate_neb(
+    calculator=calculator,
+    initial_file='initial.xyz',
+    final_file='final.xyz',
+    ts_guess_file='ts_guess.xyz',  # Optional
+    n_images=11,
+    output_file='neb_result.xyz'
+)
+```
 
-## License
+## NEB Parameters
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+### Required
+- `calculator`: ASE calculator (MACE, EMT, etc.)
+- Either `(initial_frame, final_frame)` or `(initial_file, final_file)`
 
-## Authors
+### Optional
+- `n_images=7`: Number of images (including endpoints)
+- `fmax=0.05`: Force convergence (eV/Å)
+- `optimizer='FIRE'`: Optimizer ('FIRE' or 'BFGS')
+- `optimize_endpoints=False`: Optimize initial/final structures
+- `ts_guess_frame=None`: TS guess frame index
+- `ts_guess_file=None`: TS guess XYZ file
+- `use_climbing_image=False`: Enable climbing image NEB
+- `ci_steps=None`: Climbing image steps (None = converge)
+- `spring_constant=None`: Manual spring constant (None = auto-scale)
+- `output_file='neb_result.xyz'`: Output path
 
-- Gers&Claude
+## NEB Features
+
+### Climbing Image NEB
+Accurately locates transition states:
+```python
+images, energies = traj.calculate_neb(
+    calculator=calculator,
+    initial_frame=0,
+    final_frame=100,
+    use_climbing_image=True,
+    ci_steps=500  # Or None for convergence
+)
+```
+
+### Endpoint Optimization
+Pre-optimize reactant/product:
+```python
+images, energies = traj.calculate_neb(
+    calculator=calculator,
+    initial_frame=0,
+    final_frame=100,
+    optimize_endpoints=True
+)
+```
+
+### Parallel Computation
+Automatic MPI support with ASE:
+```bash
+mpirun -np 4 python neb_script.py
+```
+
+### Outputs
+- `neb_result.xyz`: Final NEB path
+- `neb_trajectory.traj`: ASE trajectory
+- `trajectory_neb_barrier.pdf`: Energy profile plot
+- `trajectory_neb_barrier.csv`: Energy data
+- `neb_analysis.log`: Detailed log
+
+## Other TRAGICS Features
+
+### SOAP Analysis
+```python
+soap_vectors = traj.calculate_soap()
+kernel_matrix = traj.soap_kernel_matrix()
+
+selected_frames, scores = traj.sequential_similarity_selection(
+    output_file='selected.xyz',
+    threshold=0.99
+)
+```
+
+### Geometric Analysis
+```python
+frames, rg = traj.calculate_radius_of_gyration()
+distances = traj.calculate_distance(atom1_idx=0, atom2_idx=1)
+```
+
+### Trajectory Filtering
+```python
+traj.filter_trajectory(
+    output_file='subset.xyz',
+    frames_to_write=[0, 10, 20, 30]
+)
+```
 
 ## Version
 
-Current version: 0.1.0
+Current version: 0.2.0 (with NEB support)
+
+## Authors
+
+Gers & Claude
+
+## License
+
+MIT License

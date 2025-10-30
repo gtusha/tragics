@@ -11,28 +11,19 @@ def timer(func):
     """Decorator to measure execution time of methods."""
     @wraps(func)
     def wrapper(self, *args, **kwargs):
-        # Start timing
         start_time = time.time()
         start_cpu = time.process_time()
         
-        # Execute the function
         result = func(self, *args, **kwargs)
         
-        # End timing
-        end_time = time.time()
-        end_cpu = time.process_time()
+        wall_time = time.time() - start_time
+        cpu_time = time.process_time() - start_cpu
         
-        # Calculate durations
-        wall_time = end_time - start_time
-        cpu_time = end_cpu - start_cpu
-        
-        # Store timing information
         self.timings[func.__name__] = {
             'wall_time': wall_time,
             'cpu_time': cpu_time,
         }
 
-        # Print timing information
         self.logger.info(
             f"\nTiming for {func.__name__}:"
             f"\nWall clock time: {wall_time:.2f} seconds"
@@ -43,27 +34,12 @@ def timer(func):
     return wrapper
 
 def setup_logging(log_file: str) -> logging.Logger:
-    """Initialize logging to file only.
-    
-    Args:
-        log_file: Path to the log file
-        
-    Returns:
-        Configured logger instance
-    """
-    # Create a new logger with a unique name
+    """Initialize logging to file only."""
     logger = logging.getLogger(log_file)
-    
-    # Reset any existing handlers
     logger.handlers = []
-    
-    # Set the logging level
     logger.setLevel(logging.INFO)
-    
-    # Prevent the logger from propagating messages to the root logger
     logger.propagate = False
     
-    # Create and add the file handler
     file_handler = logging.FileHandler(log_file, mode='w')
     formatter = logging.Formatter('- %(asctime)s - %(message)s', 
                                 datefmt='%Y-%m-%d %H:%M:%S')
@@ -87,44 +63,22 @@ class TrajectoryWriter:
                          append: str = 'no',
                          frames_to_write: Optional[list] = None,
                          subset_atoms: Optional[Union[str, List[int]]] = None) -> List[int]:
-        """Write selected frames to a new xyz file, or append them to an existing file.
-        
-        Args:
-            output_file: Output file path
-            initial_frame: First frame to include
-            final_frame: Last frame to include
-            step: Frame step size
-            append: If 'yes', append to existing file instead of overwriting
-            frames_to_write: Specific frames to write (overrides other frame selection parameters)
-            subset_atoms: Atoms to include in output
-            
-        Returns:
-            List of frames that were written
-            
-        Raises:
-            ValueError: If parameters are invalid
-            OSError: If output file cannot be created
-        """
-        # Validate output file
+        """Write selected frames to a new xyz file."""
         if not isinstance(output_file, str) or not output_file.strip():
             raise ValueError("output_file must be a non-empty string")
         
-        # Check if we can create the output file
         try:
             output_path = Path(output_file)
             output_path.parent.mkdir(parents=True, exist_ok=True)
         except (OSError, PermissionError) as e:
             raise OSError(f"Cannot create output file at {output_file}: {e}")
         
-        # Validate step
         if step <= 0:
             raise ValueError("step must be positive")
         
-        # Validate append parameter
         if not isinstance(append, str) or append.lower() not in ['yes', 'no']:
             raise ValueError("append must be 'yes' or 'no'")
         
-        # Validate frames_to_write if provided
         if frames_to_write is not None:
             if not isinstance(frames_to_write, (list, tuple)):
                 raise ValueError("frames_to_write must be a list or tuple")
@@ -135,7 +89,6 @@ class TrajectoryWriter:
             if not all(0 <= f < self.tragics.n_frames for f in frames_to_write):
                 raise ValueError(f"All frame indices must be between 0 and {self.tragics.n_frames-1}")
         else:
-            # Validate frame range
             start = initial_frame if initial_frame is not None else 0
             end = final_frame if final_frame is not None else self.tragics.n_frames
             
@@ -146,7 +99,6 @@ class TrajectoryWriter:
             if start >= end:
                 raise ValueError("initial_frame must be less than final_frame")
         
-        # Process subset_atoms parameter
         if subset_atoms is not None:
             if isinstance(subset_atoms, str):
                 if '-' not in subset_atoms:
@@ -171,7 +123,6 @@ class TrajectoryWriter:
         else:
             atom_indices = list(range(self.tragics.n_atoms))
 
-        # Determine frames to write
         if frames_to_write is not None:
             frames = frames_to_write
         else:
@@ -184,14 +135,9 @@ class TrajectoryWriter:
         try:
             with open(output_file, mode) as f:
                 for frame in frames:
-                    # Go to specific frame
                     ts = self.tragics.universe.trajectory[frame]
-
-                    # Write number of atoms
                     f.write(f"{len(atom_indices)}\n")
                     f.write(f"Frame {frame}\n")
-
-                    # Write atomic positions for selected atoms
                     for idx in atom_indices:
                         atom = self.tragics.universe.atoms[idx]
                         f.write(f"{atom.name} {atom.position[0]:.6f} "
@@ -200,36 +146,3 @@ class TrajectoryWriter:
             raise OSError(f"Error writing to file {output_file}: {e}")
 
         return frames
-
-    @staticmethod
-    def load_kernel_matrix(file_path: str) -> np.ndarray:
-        """Load a previously saved kernel matrix.
-        
-        Args:
-            file_path: Path to the .npy file containing the kernel matrix
-            
-        Returns:
-            Loaded kernel matrix
-            
-        Raises:
-            FileNotFoundError: If file doesn't exist
-            ValueError: If file cannot be loaded or is not a valid numpy array
-        """
-        if not isinstance(file_path, str) or not file_path.strip():
-            raise ValueError("file_path must be a non-empty string")
-        
-        file_path = Path(file_path)
-        if not file_path.exists():
-            raise FileNotFoundError(f"Kernel matrix file not found: {file_path}")
-        
-        try:
-            kernel_matrix = np.load(file_path)
-            if not isinstance(kernel_matrix, np.ndarray):
-                raise ValueError("Loaded file does not contain a numpy array")
-            if kernel_matrix.ndim != 2:
-                raise ValueError("Kernel matrix must be a 2D array")
-            if kernel_matrix.shape[0] != kernel_matrix.shape[1]:
-                raise ValueError("Kernel matrix must be square")
-            return kernel_matrix
-        except Exception as e:
-            raise ValueError(f"Failed to load kernel matrix from {file_path}: {e}")
